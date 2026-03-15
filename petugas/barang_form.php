@@ -226,8 +226,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <p class="text-coffee">Klik untuk upload gambar</p>
                                 </label>
                             </div>
-                            <div id="preview-container" class="mt-4 <?php echo !empty($edit_data['gambar']) ? '' : 'hidden'; ?>">
-                                <img id="preview-image" src="<?php echo !empty($edit_data['gambar']) && file_exists('../uploads/barang/' . $edit_data['gambar']) ? '../uploads/barang/' . htmlspecialchars($edit_data['gambar']) : ''; ?>" class="max-h-40 rounded-lg border border-biscuit mx-auto object-contain" alt="Preview">
+                            <?php $gambar_info = !empty($edit_data['gambar']) ? resolveUploadFile($edit_data['gambar'], 'barang') : null; ?>
+                            <div id="preview-container" class="mt-4 <?php echo $gambar_info ? '' : 'hidden'; ?>">
+                                <img id="preview-image" src="<?php echo $gambar_info ? htmlspecialchars($gambar_info['url']) : ''; ?>" class="max-h-40 rounded-lg border border-biscuit mx-auto object-contain" alt="Preview">
                             </div>
                         </div>
                         <div class="md:col-span-2">

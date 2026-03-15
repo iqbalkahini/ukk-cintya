@@ -154,15 +154,9 @@ if (!$lelang_data) {
             <div class="bg-white rounded-xl shadow-warm overflow-hidden hover:shadow-xl transition duration-300 transform hover:-translate-y-1 border border-biscuit barang-card">
                 <!-- Image -->
                 <div class="h-56 bg-biscuit flex items-center justify-center relative overflow-hidden">
-                    <?php 
-                    // Cek apakah ada gambar
-                    if(!empty($row['gambar']) && file_exists('../uploads/barang/' . $row['gambar'])): 
-                    ?>
-                        <img src="../uploads/barang/<?php echo $row['gambar']; ?>" 
-                             alt="<?php echo htmlspecialchars($row['nama_barang']); ?>" 
-                             class="barang-image">
-                    <?php elseif(!empty($row['gambar']) && file_exists('../uploads/' . $row['gambar'])): ?>
-                        <img src="../uploads/<?php echo $row['gambar']; ?>" 
+                    <?php $gambar_info = resolveUploadFile($row['gambar'], 'barang'); ?>
+                    <?php if($gambar_info): ?>
+                        <img src="<?php echo htmlspecialchars($gambar_info['url']); ?>" 
                              alt="<?php echo htmlspecialchars($row['nama_barang']); ?>" 
                              class="barang-image">
                     <?php else: ?>

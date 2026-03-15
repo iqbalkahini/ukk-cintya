@@ -302,18 +302,9 @@ if(mysqli_num_rows($check_table) > 0) {
                     <div class="bg-white rounded-xl shadow-warm overflow-hidden border border-biscuit sticky top-8">
                         <!-- Image -->
                         <div class="h-64 bg-biscuit flex items-center justify-center relative overflow-hidden">
-                            <?php 
-                            // Cek gambar di folder uploads/barang/
-                            if(!empty($lelang['gambar']) && file_exists('../uploads/barang/' . $lelang['gambar'])): 
-                            ?>
-                                <img src="../uploads/barang/<?php echo htmlspecialchars($lelang['gambar']); ?>" 
-                                     alt="<?php echo htmlspecialchars($lelang['nama_barang']); ?>" 
-                                     class="barang-image">
-                            <?php 
-                            // Cek gambar di folder uploads/ (folder lama)
-                            elseif(!empty($lelang['gambar']) && file_exists('../uploads/' . $lelang['gambar'])): 
-                            ?>
-                                <img src="../uploads/<?php echo htmlspecialchars($lelang['gambar']); ?>" 
+                            <?php $gambar_info = resolveUploadFile($lelang['gambar'], 'barang'); ?>
+                            <?php if($gambar_info): ?>
+                                <img src="<?php echo htmlspecialchars($gambar_info['url']); ?>" 
                                      alt="<?php echo htmlspecialchars($lelang['nama_barang']); ?>" 
                                      class="barang-image">
                             <?php else: ?>

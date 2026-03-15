@@ -214,15 +214,9 @@ $user_bid = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM history_lelang
                 <div class="bg-white rounded-xl shadow-warm overflow-hidden border border-biscuit">
                     <!-- Image Gallery -->
                     <div class="h-96 bg-biscuit flex items-center justify-center relative overflow-hidden">
-                        <?php 
-                        // Cek apakah ada gambar
-                        if(!empty($lelang['gambar']) && file_exists('../uploads/barang/' . $lelang['gambar'])): 
-                        ?>
-                            <img src="../uploads/barang/<?php echo htmlspecialchars($lelang['gambar']); ?>" 
-                                 alt="<?php echo htmlspecialchars($lelang['nama_barang']); ?>" 
-                                 class="barang-image">
-                        <?php elseif(!empty($lelang['gambar']) && file_exists('../uploads/' . $lelang['gambar'])): ?>
-                            <img src="../uploads/<?php echo htmlspecialchars($lelang['gambar']); ?>" 
+                        <?php $gambar_info = resolveUploadFile($lelang['gambar'], 'barang'); ?>
+                        <?php if($gambar_info): ?>
+                            <img src="<?php echo htmlspecialchars($gambar_info['url']); ?>" 
                                  alt="<?php echo htmlspecialchars($lelang['nama_barang']); ?>" 
                                  class="barang-image">
                         <?php else: ?>

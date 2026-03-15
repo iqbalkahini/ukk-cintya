@@ -16,8 +16,11 @@ if (!$conn) {
 // Set charset
 mysqli_set_charset($conn, "utf8mb4");
 
-// Base URL
-define('BASE_URL', 'http://localhost/ukk-cintya/');
+// Base URL dibuat root-relative agar aman untuk localhost maupun ngrok/proxy.
+define('BASE_URL', '/ukk-cintya/');
+
+// Untuk path file fisik di server
+define('BASE_PATH', __DIR__ . '/');
 
 // Function untuk format rupiah
 function formatRupiah($angka) {
@@ -33,6 +36,52 @@ function formatTanggal($tanggal) {
     
     $pecah = explode('-', $tanggal);
     return $pecah[2] . ' ' . $bulan[(int)$pecah[1]] . ' ' . $pecah[0];
+}
+
+function resolveUploadFile($filename, $type = 'barang') {
+    if (empty($filename)) {
+        return null;
+    }
+
+    $project_root = dirname(__DIR__);
+    $clean = ltrim(str_replace('\\', '/', $filename), '/');
+    $candidates = [];
+
+    if (strpos($clean, 'uploads/') === 0) {
+        $candidates[] = $clean;
+    }
+
+    if (strpos($clean, 'barang/') === 0 || strpos($clean, 'bukti_bayar/') === 0) {
+        $candidates[] = 'uploads/' . $clean;
+    }
+
+    if ($type === 'barang' && strpos($clean, 'uploads/') !== 0 && strpos($clean, 'barang/') !== 0) {
+        $candidates[] = 'uploads/barang/' . $clean;
+    }
+
+    if (strpos($clean, 'uploads/') !== 0) {
+        $candidates[] = 'uploads/' . $clean;
+    }
+
+    $candidates = array_values(array_unique($candidates));
+
+    foreach ($candidates as $relative_path) {
+        $absolute_path = $project_root . '/' . $relative_path;
+        if (is_file($absolute_path)) {
+            return [
+                'path' => $absolute_path,
+                'relative' => $relative_path,
+                'url' => BASE_URL . ltrim($relative_path, '/')
+            ];
+        }
+    }
+
+    return null;
+}
+
+function getUploadUrl($filename, $type = 'barang') {
+    $resolved = resolveUploadFile($filename, $type);
+    return $resolved ? $resolved['url'] : '';
 }
 
 // Function untuk cek login

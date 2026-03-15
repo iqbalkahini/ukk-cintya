@@ -204,8 +204,9 @@ $recent_lelang = mysqli_query(
                                 <td class="py-3 px-4">
                                     <div class="flex items-center">
                                         <div class="w-10 h-10 bg-biscuit rounded mr-3 flex items-center justify-center overflow-hidden">
-                                            <?php if (!empty($row['gambar']) && file_exists('../uploads/barang/' . $row['gambar'])): ?>
-                                                <img src="../uploads/barang/<?php echo htmlspecialchars($row['gambar']); ?>" alt="<?php echo htmlspecialchars($row['nama_barang']); ?>" class="w-full h-full object-cover">
+                                            <?php $gambar_info = resolveUploadFile($row['gambar'], 'barang'); ?>
+                                            <?php if ($gambar_info): ?>
+                                                <img src="<?php echo htmlspecialchars($gambar_info['url']); ?>" alt="<?php echo htmlspecialchars($row['nama_barang']); ?>" class="w-full h-full object-cover">
                                             <?php else: ?>
                                                 <i class="fas fa-image text-coffee"></i>
                                             <?php endif; ?>

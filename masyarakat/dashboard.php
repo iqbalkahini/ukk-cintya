@@ -218,18 +218,9 @@ $lelang_data = mysqli_query($conn, "SELECT l.*, b.nama_barang, b.harga_awal, b.g
                 <div class="bg-white rounded-xl shadow-warm overflow-hidden hover:shadow-xl transition duration-300 border border-biscuit">
                     <!-- GAMBAR - DIPERBAIKI -->
                     <div class="h-48 bg-biscuit flex items-center justify-center relative overflow-hidden">
-                        <?php 
-                        // Cek apakah ada gambar di folder uploads/barang/
-                        if(!empty($row['gambar']) && file_exists('../uploads/barang/' . $row['gambar'])): 
-                        ?>
-                            <img src="../uploads/barang/<?php echo $row['gambar']; ?>" 
-                                 alt="<?php echo htmlspecialchars($row['nama_barang']); ?>" 
-                                 class="barang-image">
-                        <?php 
-                        // Cek apakah ada gambar di folder uploads/ (folder lama)
-                        elseif(!empty($row['gambar']) && file_exists('../uploads/' . $row['gambar'])): 
-                        ?>
-                            <img src="../uploads/<?php echo $row['gambar']; ?>" 
+                        <?php $gambar_info = resolveUploadFile($row['gambar'], 'barang'); ?>
+                        <?php if($gambar_info): ?>
+                            <img src="<?php echo htmlspecialchars($gambar_info['url']); ?>" 
                                  alt="<?php echo htmlspecialchars($row['nama_barang']); ?>" 
                                  class="barang-image">
                         <?php else: ?>

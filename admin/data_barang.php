@@ -240,10 +240,9 @@ mysqli_data_seek($barang, 0);
                                 <td class="px-6 py-4 text-coffee"><?php echo $no++; ?></td>
                                 <td class="px-6 py-4">
                                     <div class="w-16 h-16 bg-biscuit rounded-lg flex items-center justify-center overflow-hidden border border-biscuit">
-                                        <?php if (!empty($row['gambar']) && file_exists('../uploads/barang/' . $row['gambar'])): ?>
-                                            <img src="../uploads/barang/<?php echo htmlspecialchars($row['gambar']); ?>" alt="<?php echo htmlspecialchars($row['nama_barang']); ?>" class="w-full h-full object-cover">
-                                        <?php elseif (!empty($row['gambar']) && file_exists('../uploads/' . $row['gambar'])): ?>
-                                            <img src="../uploads/<?php echo htmlspecialchars($row['gambar']); ?>" alt="<?php echo htmlspecialchars($row['nama_barang']); ?>" class="w-full h-full object-cover">
+                                        <?php $gambar_info = resolveUploadFile($row['gambar'], 'barang'); ?>
+                                        <?php if ($gambar_info): ?>
+                                            <img src="<?php echo htmlspecialchars($gambar_info['url']); ?>" alt="<?php echo htmlspecialchars($row['nama_barang']); ?>" class="w-full h-full object-cover">
                                         <?php else: ?>
                                             <i class="fas fa-image text-coffee text-2xl"></i>
                                         <?php endif; ?>
