@@ -16,6 +16,31 @@ if (!function_exists('formatTanggal')) {
 
 checkLevel([2]);
 
+if (isset($_GET['delete'])) {
+    $id_barang = (int) $_GET['delete'];
+
+    $check = mysqli_query($conn, "SELECT 1 FROM tb_lelang WHERE id_barang = $id_barang LIMIT 1");
+    if ($check && mysqli_num_rows($check) > 0) {
+        $_SESSION['error'] = "Tidak dapat menghapus barang karena sudah digunakan di lelang.";
+        header('Location: data_barang.php');
+        exit;
+    }
+
+    $gambar = mysqli_fetch_assoc(mysqli_query($conn, "SELECT gambar FROM tb_barang WHERE id_barang = $id_barang"));
+    if (!empty($gambar['gambar'])) {
+        deleteUploadFile($gambar['gambar'], 'barang');
+    }
+
+    if (mysqli_query($conn, "DELETE FROM tb_barang WHERE id_barang = $id_barang")) {
+        $_SESSION['success'] = "Barang berhasil dihapus.";
+    } else {
+        $_SESSION['error'] = "Gagal menghapus barang: " . mysqli_error($conn);
+    }
+
+    header('Location: data_barang.php');
+    exit;
+}
+
 $barang = mysqli_query(
     $conn,
     "SELECT b.*,
@@ -234,9 +259,14 @@ mysqli_data_seek($barang, 0);
                                 <td class="px-6 py-4 text-center text-coffee"><?php echo $row['jumlah_lelang']; ?></td>
                                 <td class="px-6 py-4 text-center text-coffee-light"><?php echo $row['lelang_aktif']; ?></td>
                                 <td class="px-6 py-4">
-                                    <a href="barang_form.php?id=<?php echo $row['id_barang']; ?>" class="text-coffee hover:text-coffee-light transition duration-200" title="Edit">
-                                        <i class="fas fa-edit text-lg"></i>
-                                    </a>
+                                    <div class="flex space-x-3">
+                                        <a href="barang_form.php?id=<?php echo $row['id_barang']; ?>" class="text-coffee hover:text-coffee-light transition duration-200" title="Edit">
+                                            <i class="fas fa-edit text-lg"></i>
+                                        </a>
+                                        <a href="data_barang.php?delete=<?php echo $row['id_barang']; ?>" onclick="return confirm('Yakin ingin menghapus barang <?php echo htmlspecialchars(addslashes($row['nama_barang'])); ?>?')" class="text-red-600 hover:text-red-800 transition duration-200" title="Hapus">
+                                            <i class="fas fa-trash text-lg"></i>
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                             <?php endwhile; ?>

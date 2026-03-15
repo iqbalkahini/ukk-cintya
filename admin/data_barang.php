@@ -27,8 +27,8 @@ if (isset($_GET['delete'])) {
     }
 
     $gambar = mysqli_fetch_assoc(mysqli_query($conn, "SELECT gambar FROM tb_barang WHERE id_barang = $id_barang"));
-    if (!empty($gambar['gambar']) && file_exists('../uploads/barang/' . $gambar['gambar'])) {
-        unlink('../uploads/barang/' . $gambar['gambar']);
+    if (!empty($gambar['gambar'])) {
+        deleteUploadFile($gambar['gambar'], 'barang');
     }
 
     if (mysqli_query($conn, "DELETE FROM tb_barang WHERE id_barang = $id_barang")) {

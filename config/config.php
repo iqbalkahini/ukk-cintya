@@ -84,6 +84,15 @@ function getUploadUrl($filename, $type = 'barang') {
     return $resolved ? $resolved['url'] : '';
 }
 
+function deleteUploadFile($filename, $type = 'barang') {
+    $resolved = resolveUploadFile($filename, $type);
+    if (!$resolved) {
+        return false;
+    }
+
+    return @unlink($resolved['path']);
+}
+
 // Function untuk cek login
 function checkLogin() {
     if (!isset($_SESSION['id_user'])) {

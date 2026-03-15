@@ -18,17 +18,41 @@ if (!function_exists('formatTanggal')) {
 
 checkLevel([2]);
 
+if (!isset($_SESSION['success'])) {
+    $_SESSION['success'] = null;
+}
+if (!isset($_SESSION['error'])) {
+    $_SESSION['error'] = null;
+}
+
 // Handle buka/tutup lelang (dengan sanitasi)
 if(isset($_GET['action']) && isset($_GET['id'])) {
     $id = intval($_GET['id']);
     $action = $_GET['action'];
     
     if($action == 'buka') {
-        mysqli_query($conn, "UPDATE tb_lelang SET status = 'dibuka' WHERE id_lelang = $id");
-        mysqli_query($conn, "UPDATE tb_barang SET status_barang = 'dibuka' WHERE id_barang = (SELECT id_barang FROM tb_lelang WHERE id_lelang = $id)");
+        $cek_kunci = mysqli_fetch_assoc(mysqli_query($conn, "SELECT l.id_barang,
+                    EXISTS(
+                        SELECT 1
+                        FROM tb_pembayaran p
+                        WHERE p.id_lelang = l.id_lelang
+                          AND p.id_user = l.id_user
+                          AND p.status_pembayaran IN ('dibayar', 'selesai')
+                    ) AS sudah_dibayar
+                FROM tb_lelang l
+                WHERE l.id_lelang = $id"));
+
+        if ($cek_kunci && (int) $cek_kunci['sudah_dibayar'] === 1) {
+            $_SESSION['error'] = "Lelang tidak bisa dibuka lagi karena pemenang sudah melakukan pembayaran.";
+        } else {
+            mysqli_query($conn, "UPDATE tb_lelang SET status = 'dibuka' WHERE id_lelang = $id");
+            mysqli_query($conn, "UPDATE tb_barang SET status_barang = 'dibuka' WHERE id_barang = (SELECT id_barang FROM tb_lelang WHERE id_lelang = $id)");
+            $_SESSION['success'] = "Lelang berhasil dibuka.";
+        }
     } elseif($action == 'tutup') {
         mysqli_query($conn, "UPDATE tb_lelang SET status = 'ditutup' WHERE id_lelang = $id");
         mysqli_query($conn, "UPDATE tb_barang SET status_barang = 'ditutup' WHERE id_barang = (SELECT id_barang FROM tb_lelang WHERE id_lelang = $id)");
+        $_SESSION['success'] = "Lelang berhasil ditutup.";
     }
     
     header('Location: kelola_lelang.php');
@@ -40,29 +64,60 @@ if(isset($_POST['create_lelang'])) {
     $id_barang = intval($_POST['id_barang']);
     $tgl_lelang = mysqli_real_escape_string($conn, $_POST['tgl_lelang']);
     $id_petugas = intval($_SESSION['id_user']);
+
+    $barang_terkunci = mysqli_fetch_assoc(mysqli_query($conn, "SELECT EXISTS(
+            SELECT 1
+            FROM tb_lelang l
+            JOIN tb_pembayaran p ON p.id_lelang = l.id_lelang AND p.id_user = l.id_user
+            WHERE l.id_barang = $id_barang
+              AND p.status_pembayaran IN ('dibayar', 'selesai')
+        ) AS terkunci"));
     
-    // Get harga awal
-    $barang = mysqli_fetch_assoc(mysqli_query($conn, "SELECT harga_awal FROM tb_barang WHERE id_barang = $id_barang"));
-    
-    $query = "INSERT INTO tb_lelang (id_barang, tgl_lelang, harga_akhir, id_petugas, status) 
-              VALUES ($id_barang, '$tgl_lelang', {$barang['harga_awal']}, $id_petugas, 'dibuka')";
-    mysqli_query($conn, $query);
-    
-    mysqli_query($conn, "UPDATE tb_barang SET status_barang = 'dibuka' WHERE id_barang = $id_barang");
+    if ($barang_terkunci && (int) $barang_terkunci['terkunci'] === 1) {
+        $_SESSION['error'] = "Barang ini sudah dimenangkan dan dibayar, sehingga tidak bisa dibuka lagi.";
+    } else {
+        // Get harga awal
+        $barang = mysqli_fetch_assoc(mysqli_query($conn, "SELECT harga_awal FROM tb_barang WHERE id_barang = $id_barang"));
+        
+        $query = "INSERT INTO tb_lelang (id_barang, tgl_lelang, harga_akhir, id_petugas, status) 
+                  VALUES ($id_barang, '$tgl_lelang', {$barang['harga_awal']}, $id_petugas, 'dibuka')";
+        mysqli_query($conn, $query);
+        
+        mysqli_query($conn, "UPDATE tb_barang SET status_barang = 'dibuka' WHERE id_barang = $id_barang");
+        $_SESSION['success'] = "Lelang baru berhasil dibuat.";
+    }
     
     header('Location: kelola_lelang.php');
     exit;
 }
 
 // Ambil data lelang
-$lelang = mysqli_query($conn, "SELECT l.*, b.nama_barang, b.harga_awal, u.nama_lengkap as pemenang
+$lelang = mysqli_query($conn, "SELECT l.*, b.nama_barang, b.harga_awal, u.nama_lengkap as pemenang,
+                               EXISTS(
+                                   SELECT 1
+                                   FROM tb_pembayaran p
+                                   WHERE p.id_lelang = l.id_lelang
+                                     AND p.id_user = l.id_user
+                                     AND p.status_pembayaran IN ('dibayar', 'selesai')
+                               ) AS sudah_dibayar
                                FROM tb_lelang l 
                                JOIN tb_barang b ON l.id_barang = b.id_barang
                                LEFT JOIN tb_user u ON l.id_user = u.id_user
                                ORDER BY l.id_lelang DESC");
 
 // Ambil barang yang tersedia untuk lelang
-$barang_available = mysqli_query($conn, "SELECT * FROM tb_barang WHERE status_barang = 'pending' OR id_barang NOT IN (SELECT id_barang FROM tb_lelang WHERE status = 'dibuka')");
+$barang_available = mysqli_query($conn, "SELECT *
+    FROM tb_barang
+    WHERE id_barang NOT IN (
+        SELECT l.id_barang
+        FROM tb_lelang l
+        JOIN tb_pembayaran p ON p.id_lelang = l.id_lelang AND p.id_user = l.id_user
+        WHERE p.status_pembayaran IN ('dibayar', 'selesai')
+    )
+    AND (
+        status_barang = 'pending'
+        OR id_barang NOT IN (SELECT id_barang FROM tb_lelang WHERE status = 'dibuka')
+    )");
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -147,6 +202,18 @@ $barang_available = mysqli_query($conn, "SELECT * FROM tb_barang WHERE status_ba
         <main class="flex-1 p-8">
             <h1 class="text-3xl font-bold text-coffee font-serif mb-8">Kelola Barang & Penawaran</h1>
 
+            <?php if(!empty($_SESSION['success'])): ?>
+            <div class="mb-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
+                <?php echo $_SESSION['success']; unset($_SESSION['success']); ?>
+            </div>
+            <?php endif; ?>
+
+            <?php if(!empty($_SESSION['error'])): ?>
+            <div class="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+                <?php echo $_SESSION['error']; unset($_SESSION['error']); ?>
+            </div>
+            <?php endif; ?>
+
             <!-- Form Buka Lelang Baru -->
             <div class="bg-white rounded-xl shadow-warm p-6 mb-8 border border-biscuit">
                 <h2 class="text-xl font-bold text-coffee font-serif mb-4">
@@ -219,6 +286,10 @@ $barang_available = mysqli_query($conn, "SELECT * FROM tb_barang WHERE status_ba
                                            class="text-coffee hover:text-coffee-light transition duration-200">
                                             <i class="fas fa-stop-circle mr-1"></i> Tutup
                                         </a>
+                                    <?php elseif((int) $row['sudah_dibayar'] === 1): ?>
+                                        <span class="text-gray-400 cursor-not-allowed">
+                                            <i class="fas fa-lock mr-1"></i> Terkunci
+                                        </span>
                                     <?php else: ?>
                                         <a href="?action=buka&id=<?php echo $row['id_lelang']; ?>" 
                                            class="text-coffee-light hover:text-coffee-dark transition duration-200">

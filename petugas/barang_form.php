@@ -24,8 +24,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $deskripsi = mysqli_real_escape_string($conn, trim($_POST['deskripsi_barang']));
     $harga_awal = (int) str_replace('.', '', $_POST['harga_awal']);
     $tgl = mysqli_real_escape_string($conn, $_POST['tgl']);
-    $status_barang = mysqli_real_escape_string($conn, $_POST['status_barang'] ?? 'pending');
-
     $gambar_baru = '';
     if (isset($_FILES['gambar']) && $_FILES['gambar']['error'] === 0) {
         $target_dir = dirname(__DIR__) . '/uploads/barang/';
@@ -60,20 +58,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     nama_barang = '$nama_barang',
                     deskripsi_barang = '$deskripsi',
                     harga_awal = '$harga_awal',
-                    tgl = '$tgl',
-                    status_barang = '$status_barang'
+                    tgl = '$tgl'
                     $gambar_query
                   WHERE id_barang = $id_post";
 
         if (mysqli_query($conn, $query)) {
-            if ($gambar_baru !== '' && !empty($old['gambar']) && file_exists('../uploads/barang/' . $old['gambar'])) {
-                unlink('../uploads/barang/' . $old['gambar']);
+            if ($gambar_baru !== '' && !empty($old['gambar'])) {
+                deleteUploadFile($old['gambar'], 'barang');
             }
             $_SESSION['success'] = "Barang berhasil diupdate.";
             header('Location: data_barang.php');
             exit;
         }
 
+        if ($gambar_baru !== '') {
+            deleteUploadFile($gambar_baru, 'barang');
+        }
         $_SESSION['error'] = "Gagal mengupdate barang: " . mysqli_error($conn);
         header('Location: barang_form.php?id=' . $id_post);
         exit;
@@ -89,6 +89,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    if ($gambar_baru !== '') {
+        deleteUploadFile($gambar_baru, 'barang');
+    }
     $_SESSION['error'] = "Gagal menambahkan barang: " . mysqli_error($conn);
     header('Location: barang_form.php');
     exit;
@@ -207,16 +210,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <input type="hidden" name="harga_awal" id="harga_awal_hidden" value="<?php echo htmlspecialchars($edit_data['harga_awal'] ?? ''); ?>">
                             </div>
                         </div>
-                        <?php if ($edit_data): ?>
-                        <div>
-                            <label class="block text-coffee font-semibold mb-2">Status Barang</label>
-                            <select name="status_barang" class="w-full px-4 py-2 border border-biscuit rounded-lg focus:ring-2 focus:ring-[#6F4E37] focus:border-[#6F4E37] bg-white">
-                                <option value="pending" <?php echo $edit_data['status_barang'] === 'pending' ? 'selected' : ''; ?>>Pending</option>
-                                <option value="dibuka" <?php echo $edit_data['status_barang'] === 'dibuka' ? 'selected' : ''; ?>>Dibuka</option>
-                                <option value="ditutup" <?php echo $edit_data['status_barang'] === 'ditutup' ? 'selected' : ''; ?>>Ditutup</option>
-                            </select>
-                        </div>
-                        <?php endif; ?>
                         <div class="md:col-span-2">
                             <label class="block text-coffee font-semibold mb-2">Gambar Barang</label>
                             <div class="border-2 border-dashed border-biscuit rounded-lg p-4 text-center hover:border-[#6F4E37] transition bg-white">
