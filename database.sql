@@ -1,6 +1,6 @@
 -- Database: sistem_lelang_online
-CREATE DATABASE IF NOT EXISTS sistem_lelang_online;
-USE sistem_lelang_online;
+CREATE DATABASE IF NOT EXISTS sistem_lelang_online_cintya;
+USE sistem_lelang_online_cintya;
 
 -- Tabel tb_level (Level pengguna)
 CREATE TABLE tb_level (

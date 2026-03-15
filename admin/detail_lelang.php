@@ -34,7 +34,7 @@ $id_lelang = isset($_GET['id']) ? intval($_GET['id']) : 0;
 // Debug: Check if ID is valid
 if($id_lelang == 0) {
     $_SESSION['error'] = "ID lelang tidak valid";
-    header('Location: total_lelang.php');
+    header('Location: dashboard.php');
     exit;
 }
 
@@ -60,7 +60,7 @@ $lelang = mysqli_fetch_assoc($result_lelang);
 
 if(!$lelang) {
     $_SESSION['error'] = "Data lelang dengan ID $id_lelang tidak ditemukan";
-    header('Location: total_lelang.php');
+    header('Location: dashboard.php');
     exit;
 }
 
@@ -215,30 +215,14 @@ if(mysqli_num_rows($check_table) > 0) {
                         <i class="fas fa-home w-5"></i>
                         <span class="ml-3">Beranda</span>
                     </a>
-                    <?php if($is_admin): ?>
-                    <a href="total_barang.php" class="flex items-center px-4 py-3 text-coffee hover:bg-biscuit rounded-lg transition duration-200">
-                        <i class="fas fa-box w-5"></i>
-                        <span class="ml-3">Total Barang</span>
-                    </a>
-                    <?php endif; ?>
                     <a href="data_barang.php" class="flex items-center px-4 py-3 text-coffee hover:bg-biscuit rounded-lg transition duration-200">
                         <i class="fas fa-database w-5"></i>
                         <span class="ml-3">Data Barang</span>
-                    </a>
-                    <a href="total_lelang.php" class="flex items-center px-4 py-3 bg-biscuit text-coffee rounded-lg shadow-sm border border-biscuit-dark">
-                        <i class="fas fa-gavel w-5"></i>
-                        <span class="ml-3">Total Lelang</span>
                     </a>
                     <a href="laporan.php" class="flex items-center px-4 py-3 text-coffee hover:bg-biscuit rounded-lg transition duration-200">
                         <i class="fas fa-file-alt w-5"></i>
                         <span class="ml-3">Laporan</span>
                     </a>
-                    <?php if($is_admin): ?>
-                    <a href="data_user.php" class="flex items-center px-4 py-3 text-coffee hover:bg-biscuit rounded-lg transition duration-200">
-                        <i class="fas fa-users w-5"></i>
-                        <span class="ml-3">Data Pengguna</span>
-                    </a>
-                    <?php endif; ?>
                 </nav>
             </div>
         </aside>
@@ -248,8 +232,8 @@ if(mysqli_num_rows($check_table) > 0) {
             <!-- Breadcrumb -->
             <div class="mb-6">
                 <div class="flex items-center text-sm text-coffee-light">
-                    <a href="total_lelang.php" class="hover:text-coffee transition">
-                        <i class="fas fa-gavel mr-2"></i>Total Lelang
+                    <a href="dashboard.php" class="hover:text-coffee transition">
+                        <i class="fas fa-home mr-2"></i>Beranda
                     </a>
                     <i class="fas fa-chevron-right mx-3 text-xs"></i>
                     <span class="text-coffee">Detail Lelang</span>
@@ -259,8 +243,8 @@ if(mysqli_num_rows($check_table) > 0) {
 
             <!-- Back Button -->
             <div class="mb-6">
-                <a href="total_lelang.php" class="inline-flex items-center bg-biscuit hover:bg-biscuit-dark text-coffee px-4 py-2 rounded-lg transition duration-200 shadow-sm border border-biscuit-dark">
-                    <i class="fas fa-arrow-left mr-2"></i>Kembali ke Daftar Lelang
+                <a href="dashboard.php" class="inline-flex items-center bg-biscuit hover:bg-biscuit-dark text-coffee px-4 py-2 rounded-lg transition duration-200 shadow-sm border border-biscuit-dark">
+                    <i class="fas fa-arrow-left mr-2"></i>Kembali ke Beranda
                 </a>
             </div>
 

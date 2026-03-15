@@ -26,6 +26,6 @@ if(isset($_GET['id'])) {
     }
 }
 
-header('Location: total_lelang.php');
+header('Location: dashboard.php');
 exit;
 ?>
