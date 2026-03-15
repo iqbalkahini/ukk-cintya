@@ -1,56 +1,60 @@
 <?php
 session_start();
 require_once('../config/config.php');
+checkLevel([2]);
 
-// Definisi fungsi format rupiah
 if (!function_exists('formatRupiah')) {
     function formatRupiah($angka) {
-        return 'Rp ' . number_format($angka, 0, ',', '.');
+        return 'Rp ' . number_format((float) $angka, 0, ',', '.');
     }
 }
 
-// Definisi fungsi format tanggal
 if (!function_exists('formatTanggal')) {
     function formatTanggal($tanggal) {
         return date('d M Y', strtotime($tanggal));
     }
 }
 
-checkLevel([1, 2]);
-
-$is_admin = $_SESSION['id_level'] == 1;
-
-// Sanitasi filter tanggal
-$tanggal_dari = isset($_GET['dari']) ? mysqli_real_escape_string($conn, $_GET['dari']) : date('Y-m-01');
-$tanggal_sampai = isset($_GET['sampai']) ? mysqli_real_escape_string($conn, $_GET['sampai']) : date('Y-m-d');
-
-// Validasi format tanggal sederhana
+$tanggal_dari = $_GET['dari'] ?? date('Y-m-01');
+$tanggal_sampai = $_GET['sampai'] ?? date('Y-m-d');
 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal_dari)) $tanggal_dari = date('Y-m-01');
 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal_sampai)) $tanggal_sampai = date('Y-m-d');
 
-// Get data laporan
-$laporan = mysqli_query($conn, "SELECT l.*, b.nama_barang, b.harga_awal, u.nama_lengkap as pemenang
-                                FROM tb_lelang l 
-                                JOIN tb_barang b ON l.id_barang = b.id_barang
-                                LEFT JOIN tb_user u ON l.id_user = u.id_user
-                                WHERE l.tgl_lelang BETWEEN '$tanggal_dari' AND '$tanggal_sampai'
-                                ORDER BY l.tgl_lelang DESC");
+$tanggal_dari_sql = mysqli_real_escape_string($conn, $tanggal_dari);
+$tanggal_sampai_sql = mysqli_real_escape_string($conn, $tanggal_sampai);
 
-// Inisialisasi statistik
+$laporan = mysqli_query(
+    $conn,
+    "SELECT l.*, b.nama_barang, b.harga_awal, u.nama_lengkap AS pemenang
+     FROM tb_lelang l
+     JOIN tb_barang b ON l.id_barang = b.id_barang
+     LEFT JOIN tb_user u ON l.id_user = u.id_user
+     WHERE l.tgl_lelang BETWEEN '$tanggal_dari_sql' AND '$tanggal_sampai_sql'
+     ORDER BY l.tgl_lelang DESC"
+);
+
+$rows = [];
 $total_lelang = 0;
 $total_nilai = 0;
 $lelang_selesai = 0;
+while ($row = mysqli_fetch_assoc($laporan)) {
+    $rows[] = $row;
+    $total_lelang++;
+    if ($row['status'] === 'ditutup') {
+        $lelang_selesai++;
+        $total_nilai += (float) $row['harga_akhir'];
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Laporan Lelang - Sistem Lelang Online</title>
+    <title>Laporan Lelang - Petugas</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* ... (style sama) ... */
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Poppins:wght@300;400;500;600&display=swap');
         * { font-family: 'Poppins', sans-serif; }
         h1, h2, h3, h4, h5, h6, .font-serif { font-family: 'Playfair Display', serif; }
@@ -63,15 +67,11 @@ $lelang_selesai = 0;
         .text-coffee { color: #6F4E37; }
         .text-coffee-light { color: #8B6B4D; }
         .text-biscuit { color: #F7E1C0; }
-        .border-coffee { border-color: #6F4E37; }
         .border-biscuit { border-color: #E5C9A8; }
-        .hover\:bg-coffee-dark:hover { background-color: #4A3729; }
-        .hover\:bg-biscuit-dark:hover { background-color: #E5C9A8; }
         .shadow-warm { box-shadow: 0 10px 25px -5px rgba(111,78,55,0.1), 0 8px 10px -6px rgba(111,78,55,0.1); }
     </style>
 </head>
 <body class="bg-biscuit-light">
-    <!-- Navbar -->
     <nav class="bg-coffee shadow-warm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
@@ -93,90 +93,47 @@ $lelang_selesai = 0;
     </nav>
 
     <div class="flex">
-       <!-- Sidebar -->
-<aside class="w-64 bg-white shadow-warm min-h-screen border-r border-biscuit">
-    <div class="p-4">
-        <div class="bg-biscuit rounded-lg p-4 mb-4 border border-biscuit-dark">
-            <p class="text-sm text-coffee">Beranda</p>
-            <p class="text-lg font-bold text-coffee font-serif"><?php echo $is_admin ? 'Administrator' : 'Petugas'; ?></p>
-        </div>
-        
-        <nav class="space-y-2">
-            <a href="dashboard.php" class="flex items-center px-4 py-3 text-coffee hover:bg-biscuit rounded-lg transition duration-200">
-                <i class="fas fa-home w-5"></i>
-                <span class="ml-3">Beranda</span>
-            </a>
-            
-            <?php if($is_admin): ?>
-                <!-- Menu untuk Admin -->
-                <a href="total_barang.php" class="flex items-center px-4 py-3 text-coffee hover:bg-biscuit rounded-lg transition duration-200">
-                    <i class="fas fa-box w-5"></i>
-                    <span class="ml-3">Total Barang</span>
-                </a>
-                <a href="data_barang.php" class="flex items-center px-4 py-3 text-coffee hover:bg-biscuit rounded-lg transition duration-200">
-                    <i class="fas fa-database w-5"></i>
-                    <span class="ml-3">Data Barang</span>
-                </a>
-                <a href="total_lelang.php" class="flex items-center px-4 py-3 text-coffee hover:bg-biscuit rounded-lg transition duration-200">
-                    <i class="fas fa-gavel w-5"></i>
-                    <span class="ml-3">Total Lelang</span>
-                </a>
-                <a href="pembayaran.php" class="flex items-center px-4 py-3 text-coffee hover:bg-biscuit rounded-lg transition duration-200">
-                    <i class="fas fa-money-bill w-5"></i>
-                    <span class="ml-3">Pembayaran</span>
-                </a>
-                <a href="laporan.php" class="flex items-center px-4 py-3 bg-biscuit text-coffee rounded-lg shadow-sm border border-biscuit-dark">
-                    <i class="fas fa-file-alt w-5"></i>
-                    <span class="ml-3">Laporan</span>
-                </a>
-                <a href="data_user.php" class="flex items-center px-4 py-3 text-coffee hover:bg-biscuit rounded-lg transition duration-200">
-                    <i class="fas fa-users w-5"></i>
-                    <span class="ml-3">Data User</span>
-                </a>
-            <?php else: ?>
-                <!-- Menu untuk Petugas -->
-                <a href="data_barang.php" class="flex items-center px-4 py-3 text-coffee hover:bg-biscuit rounded-lg transition duration-200">
-                    <i class="fas fa-box w-5"></i>
-                    <span class="ml-3">Data Barang</span>
-                </a>
-                <a href="kelola_lelang.php" class="flex items-center px-4 py-3 text-coffee hover:bg-biscuit rounded-lg transition duration-200">
-                    <i class="fas fa-gavel w-5"></i>
-                    <span class="ml-3">Kelola Lelang</span>
-                </a>
-                <a href="pembayaran.php" class="flex items-center px-4 py-3 text-coffee hover:bg-biscuit rounded-lg transition duration-200">
-                    <i class="fas fa-money-bill w-5"></i>
-                    <span class="ml-3">Pembayaran</span>
-                </a>
-                <a href="laporan.php" class="flex items-center px-4 py-3 bg-biscuit text-coffee rounded-lg shadow-sm border border-biscuit-dark">
-                    <i class="fas fa-file-alt w-5"></i>
-                    <span class="ml-3">Laporan</span>
-                </a>
-            <?php endif; ?>
-        </nav>
-    </div>
-</aside>
+        <aside class="w-64 bg-white shadow-warm min-h-screen border-r border-biscuit">
+            <div class="p-4">
+                <div class="bg-biscuit rounded-lg p-4 mb-4 border border-biscuit-dark">
+                    <p class="text-sm text-coffee">Beranda</p>
+                    <p class="text-lg font-bold text-coffee font-serif">Petugas</p>
+                </div>
+                <nav class="space-y-2">
+                    <a href="dashboard.php" class="flex items-center px-4 py-3 text-coffee hover:bg-biscuit rounded-lg transition duration-200">
+                        <i class="fas fa-home w-5"></i><span class="ml-3">Beranda</span>
+                    </a>
+                    <a href="data_barang.php" class="flex items-center px-4 py-3 text-coffee hover:bg-biscuit rounded-lg transition duration-200">
+                        <i class="fas fa-box w-5"></i><span class="ml-3">Data Barang</span>
+                    </a>
+                    <a href="kelola_lelang.php" class="flex items-center px-4 py-3 text-coffee hover:bg-biscuit rounded-lg transition duration-200">
+                        <i class="fas fa-gavel w-5"></i><span class="ml-3">Kelola Lelang</span>
+                    </a>
+                    <a href="pembayaran.php" class="flex items-center px-4 py-3 text-coffee hover:bg-biscuit rounded-lg transition duration-200">
+                        <i class="fas fa-money-bill w-5"></i><span class="ml-3">Pembayaran</span>
+                    </a>
+                    <a href="laporan.php" class="flex items-center px-4 py-3 bg-biscuit text-coffee rounded-lg shadow-sm border border-biscuit-dark">
+                        <i class="fas fa-file-alt w-5"></i><span class="ml-3">Laporan</span>
+                    </a>
+                </nav>
+            </div>
+        </aside>
 
-        <!-- Main Content -->
         <main class="flex-1 p-8">
             <div class="mb-8">
-                <h1 class="text-3xl font-bold text-coffee font-serif">
-                    <i class="fas fa-chart-bar mr-2"></i>Laporan Lelang
-                </h1>
-                <p class="text-gray-600 mt-2">Laporan data lelang periode tertentu</p>
+                <h1 class="text-3xl font-bold text-coffee font-serif"><i class="fas fa-chart-bar mr-2"></i>Laporan Lelang</h1>
+                <p class="text-gray-600 mt-2">Filter laporan lalu export ke PDF atau Excel.</p>
             </div>
 
-            <!-- Filter -->
             <div class="bg-white rounded-xl shadow-warm p-6 mb-8 border border-biscuit">
                 <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
                         <label class="block text-coffee font-semibold mb-2">Tanggal Dari</label>
-                        <input type="date" name="dari" value="<?php echo $tanggal_dari; ?>"
-                               class="w-full px-4 py-2 border border-biscuit rounded-lg focus:ring-2 focus:ring-coffee focus:border-coffee">
+                        <input type="date" name="dari" value="<?php echo htmlspecialchars($tanggal_dari); ?>" class="w-full px-4 py-2 border border-biscuit rounded-lg focus:ring-2 focus:ring-coffee focus:border-coffee">
                     </div>
                     <div>
                         <label class="block text-coffee font-semibold mb-2">Tanggal Sampai</label>
-                        <input type="date" name="sampai" value="<?php echo $tanggal_sampai; ?>"
-                               class="w-full px-4 py-2 border border-biscuit rounded-lg focus:ring-2 focus:ring-coffee focus:border-coffee">
+                        <input type="date" name="sampai" value="<?php echo htmlspecialchars($tanggal_sampai); ?>" class="w-full px-4 py-2 border border-biscuit rounded-lg focus:ring-2 focus:ring-coffee focus:border-coffee">
                     </div>
                     <div class="flex items-end">
                         <button type="submit" class="w-full bg-coffee hover:bg-coffee-dark text-biscuit px-6 py-2 rounded-lg transition duration-200 shadow-warm">
@@ -184,24 +141,28 @@ $lelang_selesai = 0;
                         </button>
                     </div>
                     <div class="flex items-end">
-                        <button type="button" onclick="window.print()" 
-                                class="w-full bg-coffee-light hover:bg-coffee-dark text-biscuit px-6 py-2 rounded-lg transition duration-200 shadow-warm">
+                        <button type="button" onclick="window.print()" class="w-full bg-coffee-light hover:bg-coffee-dark text-biscuit px-6 py-2 rounded-lg transition duration-200 shadow-warm">
                             <i class="fas fa-print mr-2"></i>Cetak
                         </button>
                     </div>
                 </form>
+
+                <div class="flex flex-col md:flex-row gap-3 mt-4">
+                    <a href="export_laporan.php?format=pdf&dari=<?php echo urlencode($tanggal_dari); ?>&sampai=<?php echo urlencode($tanggal_sampai); ?>" class="inline-flex items-center justify-center bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg transition duration-200 shadow-warm">
+                        <i class="fas fa-file-pdf mr-2"></i>Export PDF
+                    </a>
+                    <a href="export_laporan.php?format=excel&dari=<?php echo urlencode($tanggal_dari); ?>&sampai=<?php echo urlencode($tanggal_sampai); ?>" class="inline-flex items-center justify-center bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg transition duration-200 shadow-warm">
+                        <i class="fas fa-file-excel mr-2"></i>Export Excel
+                    </a>
+                </div>
             </div>
 
-            <!-- Tabel Laporan -->
             <div class="bg-white rounded-xl shadow-warm overflow-hidden border border-biscuit">
                 <div class="p-6 border-b border-biscuit bg-biscuit">
-                    <h2 class="text-xl font-bold text-coffee font-serif">
-                        Data Lelang Periode <?php echo formatTanggal($tanggal_dari); ?> s/d <?php echo formatTanggal($tanggal_sampai); ?>
-                    </h2>
+                    <h2 class="text-xl font-bold text-coffee font-serif">Data Lelang Periode <?php echo formatTanggal($tanggal_dari); ?> s/d <?php echo formatTanggal($tanggal_sampai); ?></h2>
                 </div>
-                
                 <div class="overflow-x-auto">
-                    <table class="w-full" id="laporan-table">
+                    <table class="w-full">
                         <thead class="bg-biscuit-light">
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-coffee uppercase tracking-wider border-b border-biscuit">No</th>
@@ -214,31 +175,29 @@ $lelang_selesai = 0;
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-biscuit">
-                            <?php 
-                            $no = 1;
-                            while($row = mysqli_fetch_assoc($laporan)): 
-                                $total_lelang++;
-                                if($row['status'] == 'ditutup') {
-                                    $lelang_selesai++;
-                                    $total_nilai += $row['harga_akhir'];
-                                }
-                            ?>
-                            <tr class="hover:bg-biscuit-light transition duration-200">
-                                <td class="px-6 py-4 text-coffee"><?php echo $no++; ?></td>
-                                <td class="px-6 py-4 text-gray-600"><?php echo formatTanggal($row['tgl_lelang']); ?></td>
-                                <td class="px-6 py-4 font-medium text-coffee"><?php echo htmlspecialchars($row['nama_barang']); ?></td>
-                                <td class="px-6 py-4 text-gray-600"><?php echo formatRupiah($row['harga_awal']); ?></td>
-                                <td class="px-6 py-4 text-coffee-light font-semibold"><?php echo formatRupiah($row['harga_akhir']); ?></td>
-                                <td class="px-6 py-4 text-coffee"><?php echo htmlspecialchars($row['pemenang'] ?? '-'); ?></td>
-                                <td class="px-6 py-4">
-                                    <?php if($row['status'] == 'dibuka'): ?>
-                                        <span class="px-3 py-1 bg-biscuit text-coffee rounded-full text-xs font-semibold border border-biscuit-dark">Dibuka</span>
-                                    <?php else: ?>
-                                        <span class="px-3 py-1 bg-coffee text-biscuit rounded-full text-xs font-semibold">Selesai</span>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-                            <?php endwhile; ?>
+                            <?php if (count($rows) > 0): ?>
+                                <?php foreach ($rows as $index => $row): ?>
+                                <tr class="hover:bg-biscuit-light transition duration-200">
+                                    <td class="px-6 py-4 text-coffee"><?php echo $index + 1; ?></td>
+                                    <td class="px-6 py-4 text-gray-600"><?php echo formatTanggal($row['tgl_lelang']); ?></td>
+                                    <td class="px-6 py-4 font-medium text-coffee"><?php echo htmlspecialchars($row['nama_barang']); ?></td>
+                                    <td class="px-6 py-4 text-gray-600"><?php echo formatRupiah($row['harga_awal']); ?></td>
+                                    <td class="px-6 py-4 text-coffee-light font-semibold"><?php echo formatRupiah($row['harga_akhir']); ?></td>
+                                    <td class="px-6 py-4 text-coffee"><?php echo htmlspecialchars($row['pemenang'] ?: '-'); ?></td>
+                                    <td class="px-6 py-4">
+                                        <?php if ($row['status'] === 'dibuka'): ?>
+                                            <span class="px-3 py-1 bg-biscuit text-coffee rounded-full text-xs font-semibold border border-biscuit-dark">Dibuka</span>
+                                        <?php else: ?>
+                                            <span class="px-3 py-1 bg-coffee text-biscuit rounded-full text-xs font-semibold">Selesai</span>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="7" class="px-6 py-10 text-center text-gray-500">Tidak ada data laporan untuk periode ini.</td>
+                                </tr>
+                            <?php endif; ?>
                         </tbody>
                         <tfoot class="bg-biscuit-light">
                             <tr class="font-bold">
@@ -249,8 +208,6 @@ $lelang_selesai = 0;
                         </tfoot>
                     </table>
                 </div>
-
-                <!-- Summary -->
                 <div class="p-6 border-t border-biscuit bg-biscuit">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div class="text-center p-4 bg-white rounded-lg shadow border border-biscuit">
@@ -273,7 +230,7 @@ $lelang_selesai = 0;
 
     <style>
         @media print {
-            aside, nav, button, .no-print { display: none !important; }
+            aside, nav, form, a, button { display: none !important; }
             main { padding: 20px !important; width: 100% !important; }
         }
     </style>

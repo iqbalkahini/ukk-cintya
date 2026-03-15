@@ -17,7 +17,7 @@ if (!$conn) {
 mysqli_set_charset($conn, "utf8mb4");
 
 // Base URL
-define('BASE_URL', 'http://localhost/sistem-lelang-online/');
+define('BASE_URL', 'http://localhost/ukk-cintya/');
 
 // Function untuk format rupiah
 function formatRupiah($angka) {
